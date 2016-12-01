@@ -3,6 +3,14 @@ var iotHub = require('azure-event-hubs').Client;
 
 nconf.argv().env().file('./config.json');
 
+var firebase = require("firebase");
+
+var firebaseConfig = {
+    apiKey: nconf.get('firebaseApiKey'),
+    databaseURL: nconf.get('firebaseDatabaseURL'),
+};
+firebase.initializeApp(firebaseConfig);
+
 var iotHubConnString = nconf.get('iotHubConnString');
 var iotHubClient = iotHub.fromConnectionString(iotHubConnString);
 
@@ -21,6 +29,7 @@ iotHubClient.open()
 
 function persistMessage(message) {
     // deviceMessagesNode.push(message);
+    var deviceMessagesNode = firebase.database().ref(nconf.get('firebaseTargetPath'));
     deviceMessagesNode.set(message);
 };
 
