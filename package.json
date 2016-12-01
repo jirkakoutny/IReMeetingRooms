@@ -1,0 +1,16 @@
+{
+  "name": "iot_dashboard",
+  "version": "1.0.0",
+  "description": "",
+  "author": "JirKa",
+  "license": "ISC",
+  "devDependencies": {
+    "concurrently": "^3.1.0"
+  },
+  "scripts": {
+    "start": "concurrently \"npm run server\" \"npm run client\"",
+    "server": "node start-server.js",
+    "client": "node start-client.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}

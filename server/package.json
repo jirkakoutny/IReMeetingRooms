@@ -1,0 +1,17 @@
+{
+  "name": "iot_dashboard_client",
+  "version": "1.0.0",
+  "description": "",
+  "author": "JirKa",
+  "license": "ISC",  
+  "dependencies": {
+    "azure-event-hubs": "0.0.4",
+    "body-parser": "^1.15.2",
+    "express": "^4.14.0",
+    "firebase": "^3.6.1",
+    "nconf": "^0.8.4"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}
