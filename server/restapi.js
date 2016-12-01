@@ -12,8 +12,6 @@ app.get('/api/get', function (req, res) {
 
 app.post('/api/post', function (req, res) {
     var token = req.body.token;
-    console.log(req.headers);
-    console.log(req.body);
     console.log(req.body.token);
 
     res.json({ message: 'Got a POST request', token: token })
