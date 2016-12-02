@@ -62,6 +62,7 @@ function sendC2DCommand(targetDevice) {
             message.ack = 'full';
             message.messageId = "My Message ID";
             console.log('Sending message: ' + message.getData());
+            console.log('Recipitent: ' + targetDevice);
             iotHubC2DClient.send(targetDevice, message, handleC2DResult('send'));
         }
     });
@@ -81,5 +82,18 @@ function handleC2DFeedback(err, receiver) {
     });
 }
 
+module.exports = {
+    sayHelloInEnglish: function () {
+        return "HELLO";
+    },
+
+    sayHelloInSpanish: function () {
+        return "Hola";
+    },
+
+    sendC2DCommand: function (targetDevice) {
+        return sendC2DCommand(targetDevice);
+    }
+};
 
 
