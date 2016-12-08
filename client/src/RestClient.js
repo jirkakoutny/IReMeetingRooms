@@ -1,7 +1,14 @@
-function search(query, cb) {
-    return fetch(`/api/post`, {
-        accept: 'application/json',
+function command(action, actor, cb) {
+    var payload = {
+        action: action,
+        actor: actor
+    };
+    return fetch(`/api/command`, {
         method: "POST",
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
     })
         .then(checkStatus)
         .then(parseJSON)
@@ -15,7 +22,7 @@ function checkStatus(response) {
         const error = new Error(`HTTP Error ${response.statusText}`);
         error.status = response.statusText;
         error.response = response;
-        console.log(error); 
+        console.log(error);
         throw error;
     }
 }
@@ -24,6 +31,6 @@ function parseJSON(response) {
     return response.json();
 }
 
-const RestClient = { search };
+const RestClient = { command };
 
 export default RestClient;

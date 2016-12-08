@@ -13,7 +13,7 @@ class Room extends Component {
         if (!!this.props.data) {
             if (!!this.props.data.actuators) {
                 this.props.data.actuators.forEach(x => {
-                    actuators.push(<SimpleActuator data={x} key={x.name}></SimpleActuator>);
+                    actuators.push(<SimpleActuator data={x} key={x.id}></SimpleActuator>);
                 });
             }
             renderState = !!this.props.data.state ?<RoomState data={this.props.data.state}></RoomState> : null; 

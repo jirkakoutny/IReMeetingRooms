@@ -2,13 +2,21 @@ import React, { Component } from 'react';
 
 import { Button } from 'semantic-ui-react'
 
+import RestClient from './../../RestClient.js'
+
 class OnOff extends Component {
     switchOn = () => {
-        console.log('this is:', this);
+        RestClient.command('switchOn', this.props.data, (x) => {
+            console.log('After');
+            console.log(x);
+        });
     }
 
     switchOff = () => {
-        console.log('this is:', this);
+        RestClient.command('switchOff', this.props.data, (x) => {
+            console.log('After');
+            console.log(x);
+        });
     }
 
     render() {

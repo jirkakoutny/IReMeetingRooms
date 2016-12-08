@@ -22,7 +22,7 @@ class SimpleActuator extends Component {
                 </Card.Content>
                 {actions}
                 <Card.Content extra>
-                    <OnOff data={this.props.data.name}></OnOff>
+                    <OnOff data={this.props.data.id}></OnOff>
                 </Card.Content>
             </Card>
         );

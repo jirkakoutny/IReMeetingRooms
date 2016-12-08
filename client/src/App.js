@@ -9,8 +9,6 @@ import Room from './Components/Room'
 
 import logo from '../public/img/logo.png'
 
-import RestClient from './RestClient.js'
-
 import moment from 'moment';
 
 import * as firebase from 'firebase';
@@ -28,9 +26,6 @@ class App extends Component {
         this.state = {
             room: null,
         };
-        RestClient.search('', (foods) => {
-            console.log(foods);
-        });
     }
 
     componentDidMount() {

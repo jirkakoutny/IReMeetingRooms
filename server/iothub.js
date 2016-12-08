@@ -51,14 +51,16 @@ function persistMessage(message) {
 };
 
 // IoTHubC2DCommenader
-function sendC2DCommand(targetDevice) {
+function sendC2DCommand(targetDevice, action, actor) {
     iotHubC2DClient.open(function (err) {
         if (err) {
             console.error('Could not connect: ' + err.message);
         } else {
             console.log('Service client connected');
             iotHubC2DClient.getFeedbackReceiver(handleC2DFeedback);
-            var message = new iotHubMsg('Cloud to device message.');
+
+            var data = JSON.stringify({ action: action, actor: actor });
+            var message = new iotHubMsg(data);
             message.ack = 'full';
             message.messageId = "My Message ID";
             console.log('Sending message: ' + message.getData());
@@ -83,16 +85,8 @@ function handleC2DFeedback(err, receiver) {
 }
 
 module.exports = {
-    sayHelloInEnglish: function () {
-        return "HELLO";
-    },
-
-    sayHelloInSpanish: function () {
-        return "Hola";
-    },
-
-    sendC2DCommand: function (targetDevice) {
-        return sendC2DCommand(targetDevice);
+    sendC2DCommand: function (targetDevice, action, actor) {
+        return sendC2DCommand(targetDevice, action, actor);
     }
 };
 

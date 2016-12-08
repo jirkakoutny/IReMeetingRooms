@@ -13,8 +13,8 @@ class RoomState extends Component {
         var timestamp = '--';
 
         if (!!this.props.data) {
-            temperature = (!!this.props.data.temperature ? this.props.data.temperature.toFixed(2) : '--') + ' °C';
-            humidity = (!!this.props.data.humidity ? this.props.data.humidity.toFixed(2) : '--') + '%';
+            temperature = (!!this.props.data.temperature ? this.props.data.temperature.toFixed(0) : '--') + '°C';
+            humidity = (!!this.props.data.humidity ? this.props.data.humidity.toFixed(0) : '--') + '%';
             light = (!!this.props.data.light ? this.props.data.light.toFixed(0) : '--') + '%';
             move = !!this.props.data.move && this.props.data.move ? 'Ano' : 'Ne';
             timestamp = !!this.props.data.timestamp ? moment(this.props.data.timestamp, "X").fromNow() : '--';
