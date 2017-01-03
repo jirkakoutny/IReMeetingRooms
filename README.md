@@ -3,7 +3,7 @@
 ## Quick start
 
 ### Install
-```
+```node
 npm install && cd client && npm install && cd .. && cd server && npm install && cd ..
 ```
 ### Settings
