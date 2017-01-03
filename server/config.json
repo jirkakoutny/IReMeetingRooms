@@ -3,5 +3,5 @@
     "firebaseApiKey": "AIzaSyB5EegdfZkuVB3d4nrZjc7-e5Xkz_a3Auw",
     "firebaseDatabaseURL" : "https://jkiot-b21dd.firebaseio.com",
     "firebaseTargetPath": "rooms/zasedacka_it/state",
-    "targetDevice": "jkrpi3"
+    "targetDevice": "jk01"
 }
