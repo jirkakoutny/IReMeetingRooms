@@ -1,11 +1,15 @@
 # IRe Meeting Rooms
 
-npm install && cd client && npm install && cd .. && cd server && npm install && cd ..
+## Quick start
 
-Codes (left2right, top2down)
-14013443
-14013452
-13988867
-13988876
-13982723
-13982732
+### Install
+```
+npm install && cd client && npm install && cd .. && cd server && npm install && cd ..
+```
+## Notes
+
+### Light controller codes
+1. 14013443 / 14013452
+2. 13988867 / 13988876
+3. 13982723 / 13982732
+
