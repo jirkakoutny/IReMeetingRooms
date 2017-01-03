@@ -6,6 +6,10 @@
 ```
 npm install && cd client && npm install && cd .. && cd server && npm install && cd ..
 ```
+### Settings
+#### Client
+#### Server
+#### Esp8266
 ## Notes
 
 ### Light controller codes
