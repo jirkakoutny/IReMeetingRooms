@@ -43,72 +43,6 @@ const int RC_PIN = 12; // GPIO 12 = D6
 
 const int RC_PULSE_LENGTH = 308;
 
-// Init IO
-void initIO()
-{
-  pinMode(AMBIENT_LIGHT_PIN, INPUT);
-  pinMode(PIR_PIN, INPUT_PULLUP);
-}
-
-// Init Serial
-void initSerial()
-{
-  Serial.begin(115200);
-}
-
-// Initializes current time
-void initTime() {
-  time_t epochTime;
-  configTime(0, 0, time_source1, time_source2);
-  while (true) {
-    epochTime = time(NULL);
-    if (epochTime == 0) {
-      Serial.println("Fetching NTP epoch time failed! Waiting 2 seconds to retry.");
-      delay(2000);
-    } else {
-      Serial.print("Fetched NTP epoch time is: ");
-      Serial.println(epochTime);
-      break;
-    }
-  }
-}
-
-
-
-// Initializes WiFi
-void initWifi() {
-  delay(10);
-  Serial.println();
-  Serial.print("Connecting to ");
-  Serial.println(wifi_ssid);
-
-  WiFi.begin(wifi_ssid, wifi_pwd);
-
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
-
-  Serial.println("");
-  Serial.println("WiFi connected");
-  Serial.println("IP address: ");
-  Serial.println(WiFi.localIP());
-}
-
-// Init RC
-void initRC()
-{
-  rcClient.enableTransmit(RC_PIN); // GPIO 12 = D6
-  rcClient.setPulseLength(RC_PULSE_LENGTH);
-}
-
-// Init MQTT
-void initMQTT()
-{
-  mqttClient.setServer(mqtt_server, mqtt_port);
-  mqttClient.setCallback(MqttIncomingMessageHandler);
-}
-
 // MQTT incoming message handler
 void MqttIncomingMessageHandler(char* topic, byte* payload, unsigned int length) {
   Serial.print("Message arrived [");
@@ -152,6 +86,70 @@ void MqttIncomingMessageHandler(char* topic, byte* payload, unsigned int length)
     rcClient.send(13988867, 24);
     //rcClient.send(13982723, 24);
   }
+}
+
+// Init IO
+void initIO()
+{
+  pinMode(AMBIENT_LIGHT_PIN, INPUT);
+  pinMode(PIR_PIN, INPUT_PULLUP);
+}
+
+// Init Serial
+void initSerial()
+{
+  Serial.begin(115200);
+}
+
+// Initializes current time
+void initTime() {
+  time_t epochTime;
+  configTime(0, 0, time_source1, time_source2);
+  while (true) {
+    epochTime = time(NULL);
+    if (epochTime == 0) {
+      Serial.println("Fetching NTP epoch time failed! Waiting 2 seconds to retry.");
+      delay(2000);
+    } else {
+      Serial.print("Fetched NTP epoch time is: ");
+      Serial.println(epochTime);
+      break;
+    }
+  }
+}
+
+// Initializes WiFi
+void initWifi() {
+  delay(10);
+  Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(wifi_ssid);
+
+  WiFi.begin(wifi_ssid, wifi_pwd);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  Serial.println("");
+  Serial.println("WiFi connected");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+}
+
+// Init RC
+void initRC()
+{
+  rcClient.enableTransmit(RC_PIN); // GPIO 12 = D6
+  rcClient.setPulseLength(RC_PULSE_LENGTH);
+}
+
+// Init MQTT
+void initMQTT()
+{
+  mqttClient.setServer(mqtt_server, mqtt_port);
+  mqttClient.setCallback(MqttIncomingMessageHandler);
 }
 
 // MqttReconnect to MQTT
@@ -255,6 +253,8 @@ void loop() {
 
     String s;
     root.printTo(s);
+
+    Serial.println(s);
 
     const char *cstr = s.c_str();
     mqttClient.publish("devices/jk01/messages/events/", cstr);
