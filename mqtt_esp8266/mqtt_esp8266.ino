@@ -1,52 +1,41 @@
 /*
-  Basic ESP8266 MQTT example
-
-  This sketch demonstrates the capabilities of the pubsub library in combination
-  with the ESP8266 board/library.
-
-  It connects to an MQTT server then:
-  - publishes "hello world" to the topic "outTopic" every two seconds
-  - subscribes to the topic "inTopic", printing out any messages
-    it receives. NB - it assumes the received payloads are strings not binary
-  - If the first character of the topic "inTopic" is an 1, switch ON the ESP Led,
-    else switch it off
-
-  It will reconnect to the server if the connection is lost using a blocking
-  reconnect function. See the 'mqtt_reconnect_nonblocking' example for how to
+  It will MqttReconnect to the server if the connection is lost using a blocking
+  MqttReconnect function. See the 'mqtt_MqttReconnect_nonblocking' example for how to
   achieve the same result without blocking the main loop.
-
-  To install the ESP8266 board, (using Arduino 1.6.4+):
-  - Add the following 3rd party board manager under "File -> Preferences -> Additional Boards Manager URLs":
-       http://arduino.esp8266.com/stable/package_esp8266com_index.json
-  - Open the "Tools -> Board -> Board Manager" and click install for the ESP8266"
-  - Select your ESP8266 in "Tools -> Board"
-
 */
 
-#include <ESP8266WiFi.h>
-#include "PubSubClient.h"
-#include <RCSwitch.h>
-#include "WEMOS_SHT3X.h"
-#include <ArduinoJson.h>
-#include <time.h>
+// Includes
+#include <ESP8266WiFi.h>  // ESP board
+#include <RCSwitch.h>     // 433 MHz radio
+#include "PubSubClient.h" // MQTT
+#include "WEMOS_SHT3X.h"  // Temperature and humidity
+#include <ArduinoJson.h>  // JSON helper
+#include <time.h>         // Time
 
-// Update these with values suitable for your network.
+// WiFi Settings
+const char* wifi_ssid = "IreHOST";
+const char* wifi_pwd = "ChciZazit";
 
-const char* ssid = "IreHOST";
-const char* password = "ChciZazit";
+// MQTT server
 const char* mqtt_server = "jkiothub.azure-devices.net";
 
-WiFiClientSecure espClient;
-PubSubClient client(espClient);
+// mqttClients 
+WiFiClientSecure epsWiFiClient;
+PubSubClient mqttClient(epsWiFiClient);
+
+// 433 MHz radio controller
+RCSwitch rcClient = RCSwitch();
+
+// Temperature and humidity controller
+SHT3X sht30Client(0x45);
+
 long lastMsg = 0;
 char msg[50];
 int value = 0;
 const int LIGHT_PIN = A0;
 const int PIR_PIN = D3;
 
-RCSwitch rc = RCSwitch();
-SHT3X sht30(0x45);
-
+// Initializes current time
 void initTime() {
   time_t epochTime;
   configTime(0, 0, "pool.ntp.org", "time.nist.gov");
@@ -63,22 +52,19 @@ void initTime() {
   }
 }
 
-void setup_wifi() {
-
+// Initializes WiFi
+void initWifi() {
   delay(10);
-  // We start by connecting to a WiFi network
   Serial.println();
   Serial.print("Connecting to ");
-  Serial.println(ssid);
+  Serial.println(wifi_ssid);
 
-  WiFi.begin(ssid, password);
+  WiFi.begin(wifi_ssid, wifi_pwd);
 
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
   }
-
-  randomSeed(micros());
 
   Serial.println("");
   Serial.println("WiFi connected");
@@ -86,7 +72,8 @@ void setup_wifi() {
   Serial.println(WiFi.localIP());
 }
 
-void callback(char* topic, byte* payload, unsigned int length) {
+// MQTT incoming message handler
+void MqttIncomingMessageHandler(char* topic, byte* payload, unsigned int length) {
   Serial.print("Message arrived [");
   Serial.print(topic);
   Serial.print("] ");
@@ -117,80 +104,64 @@ void callback(char* topic, byte* payload, unsigned int length) {
   if (actionString.equals("switchOn") && actorString.equals("lights"))
   {
     Serial.println("Turning lights on");
-    rc.send(14013452, 24);
+    //rcClient.send(14013452, 24);
     
-    rc.send(13988876, 24);
+    rcClient.send(13988876, 24);
     
-    rc.send(13982732, 24);
+    //rcClient.send(13982732, 24);
   }
   else if (actionString.equals("switchOff") && actorString.equals("lights"))
   {
     Serial.println("Turning kights off");
-    rc.send(14013443, 24);
+    //rcClient.send(14013443, 24);
     
-    rc.send(13988867, 24);
+    rcClient.send(13988867, 24);
     
-    rc.send(13982723, 24);
+    //rcClient.send(13982723, 24);
   }
-
-  // Switch on the LED if an 1 was received as first character
-  //  if ((char)payload[0] == '1') {
-  //    digitalWrite(BUILTIN_LED, LOW);   // Turn the LED on (Note that LOW is the voltage level
-  //    // but actually the LED is on; this is because
-  //    // it is acive low on the ESP-01)
-  //  } else {
-  //    digitalWrite(BUILTIN_LED, HIGH);  // Turn the LED off by making the voltage HIGH
-  //  }
-
 }
 
-void reconnect() {
-  // Loop until we're reconnected
-  while (!client.connected()) {
+// MqttReconnect to MQTT
+void MqttReconnect() {
+  while (!mqttClient.connected()) {
     Serial.print("Attempting MQTT connection...");
-    // Create a random client ID
-    //    String clientId = "ESP8266Client-";
-    //    clientId += String(random(0xffff), HEX);
-    // Attempt to connect
-    if (client.connect("jk01", "jkiothub.azure-devices.net/jk01", "SharedAccessSignature sr=jkiothub.azure-devices.net%2Fdevices%2Fjk01&sig=l%2BToD8LnqJHbTX%2FS8rHBvNyiNcNgF7tmX9ekLO5KE2A%3D&se=1514922089"))
+    if (mqttClient.connect("jk01", "jkiothub.azure-devices.net/jk01", "SharedAccessSignature sr=jkiothub.azure-devices.net%2Fdevices%2Fjk01&sig=l%2BToD8LnqJHbTX%2FS8rHBvNyiNcNgF7tmX9ekLO5KE2A%3D&se=1514922089"))
     {
-      Serial.println("connected");
-      // Once connected, publish an announcement...
-      //client.publish("devices/jk01/messages/events/", "hello world");
-      // ... and resubscribe
-      client.subscribe("devices/jk01/messages/devicebound/#");
+      Serial.println("connected");    
+      mqttClient.subscribe("devices/jk01/messages/devicebound/#", 1);
     } else {
-      Serial.print("failed, rc=");
-      Serial.print(client.state());
+      Serial.print("failed, rcClient=");
+      Serial.print(mqttClient.state());
       Serial.println(" try again in 5 seconds");
-      // Wait 5 seconds before retrying
       delay(5000);
     }
   }
 }
 
+// Setup board
 void setup() {
   pinMode(BUILTIN_LED, OUTPUT);     // Initialize the BUILTIN_LED pin as an output
   pinMode(LIGHT_PIN, INPUT);
   pinMode(PIR_PIN, INPUT_PULLUP);
 
   Serial.begin(115200);
-  setup_wifi();
+  initWifi();
   initTime();
 
-  rc.enableTransmit(12); // GPIO 12 = D6
-  rc.setPulseLength(308);
+  rcClient.enableTransmit(12); // GPIO 12 = D6
+  rcClient.setPulseLength(308);
 
-  client.setServer(mqtt_server, 8883);
-  client.setCallback(callback);
+  mqttClient.setServer(mqtt_server, 8883);
+  mqttClient.setCallback(MqttIncomingMessageHandler);
 }
 
+// Main loop
 void loop() {
 
-  if (!client.connected()) {
-    reconnect();
+  if (!mqttClient.connected()) {
+    MqttReconnect();
   }
-  client.loop();
+  mqttClient.loop();
 
   long now = millis();
   //if (now - lastMsg > 30000) {
@@ -200,13 +171,13 @@ void loop() {
     Serial.print("Publish message: ");
 
 
-    sht30.get();
+    sht30Client.get();
     //    Serial.print("Temperature in Celsius : ");
-    //    Serial.println(sht30.cTemp);
+    //    Serial.println(sht30Client.cTemp);
     //    Serial.print("Temperature in Fahrenheit : ");
-    //    Serial.println(sht30.fTemp);
+    //    Serial.println(sht30Client.fTemp);
     //    Serial.print("Relative Humidity : ");
-    //    Serial.println(sht30.humidity);
+    //    Serial.println(sht30Client.humidity);
     //    Serial.println();
     unsigned int light = analogRead(LIGHT_PIN);
     //    Serial.println(light);
@@ -237,8 +208,8 @@ void loop() {
     StaticJsonBuffer<200> jsonBuffer;
     JsonObject& root = jsonBuffer.createObject();
     root["deviceId"] = "jk01";
-    root["humidity"] = sht30.humidity;
-    root["temperature"] = sht30.cTemp;
+    root["humidity"] = sht30Client.humidity;
+    root["temperature"] = sht30Client.cTemp;
     root["timestamp"] = epochTime;
     root["light"] = light;
     root["move"] = motion;
@@ -251,6 +222,7 @@ void loop() {
     const char *cstr = s.c_str();
 
 
-    client.publish("devices/jk01/messages/events/", cstr);
+    mqttClient.publish("devices/jk01/messages/events/", cstr);
   }
 }
+
