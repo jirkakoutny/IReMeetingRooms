@@ -23,6 +23,7 @@ const char* time_source2 = "time.nist.gov";
 // MQTT server
 const char* mqtt_server = "jkiothub.azure-devices.net";
 const int mqtt_port = 8883;
+const int mqtt_publish_period = 2000;
 
 // mqttClients
 WiFiClientSecure epsWiFiClient;
@@ -193,19 +194,20 @@ void setup() {
 
 // Main loop
 void loop() {
-
+  // Reconnect, if not connected
   if (!mqttClient.connected()) {
     MqttReconnect();
   }
+
+  // Check incoming messages
   mqttClient.loop();
 
+  // Send current status, if it is time
   long now = millis();
-  if (now - timeFromLastMessage > 2000) {
-    timeFromLastMessage
-      = now;
+  if (now - timeFromLastMessage > mqtt_publish_period) {
+    timeFromLastMessage = now;
 
-    Serial.print("Publish message: ");
-
+    Serial.print("Publishing message: ");
 
     sht30Client.get();
     //    Serial.print("Temperature in Celsius : ");
@@ -253,11 +255,8 @@ void loop() {
 
     String s;
     root.printTo(s);
-    //    Serial.println(s);
 
     const char *cstr = s.c_str();
-
-
     mqttClient.publish("devices/jk01/messages/events/", cstr);
   }
 }
