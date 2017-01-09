@@ -22,6 +22,7 @@ const char* time_source2 = "time.nist.gov";
 
 // MQTT server
 const char* mqtt_server = "jkiothub.azure-devices.net";
+const int mqtt_port = 8883;
 
 // mqttClients
 WiFiClientSecure epsWiFiClient;
@@ -37,6 +38,22 @@ long timeFromLastMessage = 0;
 
 const int AMBIENT_LIGHT_PIN = A0;
 const int PIR_PIN = D3;
+const int RC_PIN = 12; // GPIO 12 = D6
+
+const int RC_PULSE_LENGTH = 308;
+
+// Init IO
+void initIO()
+{
+  pinMode(AMBIENT_LIGHT_PIN, INPUT);
+  pinMode(PIR_PIN, INPUT_PULLUP);
+}
+
+// Init Serial
+void initSerial()
+{
+  Serial.begin(115200);
+}
 
 // Initializes current time
 void initTime() {
@@ -54,6 +71,8 @@ void initTime() {
     }
   }
 }
+
+
 
 // Initializes WiFi
 void initWifi() {
@@ -73,6 +92,20 @@ void initWifi() {
   Serial.println("WiFi connected");
   Serial.println("IP address: ");
   Serial.println(WiFi.localIP());
+}
+
+// Init RC
+void initRC()
+{
+  rcClient.enableTransmit(RC_PIN); // GPIO 12 = D6
+  rcClient.setPulseLength(RC_PULSE_LENGTH);
+}
+
+// Init MQTT
+void initMQTT()
+{
+  mqttClient.setServer(mqtt_server, mqtt_port);
+  mqttClient.setCallback(MqttIncomingMessageHandler);
 }
 
 // MQTT incoming message handler
@@ -108,18 +141,14 @@ void MqttIncomingMessageHandler(char* topic, byte* payload, unsigned int length)
   {
     Serial.println("Turning lights on");
     //rcClient.send(14013452, 24);
-
     rcClient.send(13988876, 24);
-
     //rcClient.send(13982732, 24);
   }
   else if (actionString.equals("switchOff") && actorString.equals("lights"))
   {
     Serial.println("Turning kights off");
     //rcClient.send(14013443, 24);
-
     rcClient.send(13988867, 24);
-
     //rcClient.send(13982723, 24);
   }
 }
@@ -143,19 +172,23 @@ void MqttReconnect() {
 
 // Setup board
 void setup() {
-  pinMode(BUILTIN_LED, OUTPUT);     // Initialize the BUILTIN_LED pin as an output
-  pinMode(AMBIENT_LIGHT_PIN, INPUT);
-  pinMode(PIR_PIN, INPUT_PULLUP);
+  // Init IO
+  initIO();
 
-  Serial.begin(115200);
+  // Init serial
+  initSerial();
+
+  // Init Wifi
   initWifi();
+
+  // Init time
   initTime();
 
-  rcClient.enableTransmit(12); // GPIO 12 = D6
-  rcClient.setPulseLength(308);
+  // Init RC
+  initRC();
 
-  mqttClient.setServer(mqtt_server, 8883);
-  mqttClient.setCallback(MqttIncomingMessageHandler);
+  // Init MQTT
+  initMQTT();
 }
 
 // Main loop
@@ -167,9 +200,10 @@ void loop() {
   mqttClient.loop();
 
   long now = millis();
+  if (now - timeFromLastMessage > 2000) {
+    timeFromLastMessage
+      = now;
 
-  if (now - timeFromLastMessage   > 2000) {
-    timeFromLastMessage = now;
     Serial.print("Publish message: ");
 
 
