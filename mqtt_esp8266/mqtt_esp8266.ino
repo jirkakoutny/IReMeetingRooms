@@ -16,10 +16,14 @@
 const char* wifi_ssid = "IreHOST";
 const char* wifi_pwd = "ChciZazit";
 
+// Time
+const char* time_source1 = "pool.ntp.org";
+const char* time_source2 = "time.nist.gov";
+
 // MQTT server
 const char* mqtt_server = "jkiothub.azure-devices.net";
 
-// mqttClients 
+// mqttClients
 WiFiClientSecure epsWiFiClient;
 PubSubClient mqttClient(epsWiFiClient);
 
@@ -29,16 +33,15 @@ RCSwitch rcClient = RCSwitch();
 // Temperature and humidity controller
 SHT3X sht30Client(0x45);
 
-long lastMsg = 0;
-char msg[50];
-int value = 0;
-const int LIGHT_PIN = A0;
+long timeFromLastMessage = 0;
+
+const int AMBIENT_LIGHT_PIN = A0;
 const int PIR_PIN = D3;
 
 // Initializes current time
 void initTime() {
   time_t epochTime;
-  configTime(0, 0, "pool.ntp.org", "time.nist.gov");
+  configTime(0, 0, time_source1, time_source2);
   while (true) {
     epochTime = time(NULL);
     if (epochTime == 0) {
@@ -105,18 +108,18 @@ void MqttIncomingMessageHandler(char* topic, byte* payload, unsigned int length)
   {
     Serial.println("Turning lights on");
     //rcClient.send(14013452, 24);
-    
+
     rcClient.send(13988876, 24);
-    
+
     //rcClient.send(13982732, 24);
   }
   else if (actionString.equals("switchOff") && actorString.equals("lights"))
   {
     Serial.println("Turning kights off");
     //rcClient.send(14013443, 24);
-    
+
     rcClient.send(13988867, 24);
-    
+
     //rcClient.send(13982723, 24);
   }
 }
@@ -127,7 +130,7 @@ void MqttReconnect() {
     Serial.print("Attempting MQTT connection...");
     if (mqttClient.connect("jk01", "jkiothub.azure-devices.net/jk01", "SharedAccessSignature sr=jkiothub.azure-devices.net%2Fdevices%2Fjk01&sig=l%2BToD8LnqJHbTX%2FS8rHBvNyiNcNgF7tmX9ekLO5KE2A%3D&se=1514922089"))
     {
-      Serial.println("connected");    
+      Serial.println("connected");
       mqttClient.subscribe("devices/jk01/messages/devicebound/#", 1);
     } else {
       Serial.print("failed, rcClient=");
@@ -141,7 +144,7 @@ void MqttReconnect() {
 // Setup board
 void setup() {
   pinMode(BUILTIN_LED, OUTPUT);     // Initialize the BUILTIN_LED pin as an output
-  pinMode(LIGHT_PIN, INPUT);
+  pinMode(AMBIENT_LIGHT_PIN, INPUT);
   pinMode(PIR_PIN, INPUT_PULLUP);
 
   Serial.begin(115200);
@@ -164,10 +167,9 @@ void loop() {
   mqttClient.loop();
 
   long now = millis();
-  //if (now - lastMsg > 30000) {
-    if (now - lastMsg > 2000) {
-    lastMsg = now;
 
+  if (now - timeFromLastMessage   > 2000) {
+    timeFromLastMessage = now;
     Serial.print("Publish message: ");
 
 
@@ -179,7 +181,7 @@ void loop() {
     //    Serial.print("Relative Humidity : ");
     //    Serial.println(sht30Client.humidity);
     //    Serial.println();
-    unsigned int light = analogRead(LIGHT_PIN);
+    unsigned int light = analogRead(AMBIENT_LIGHT_PIN);
     //    Serial.println(light);
 
     if (light < 50)
