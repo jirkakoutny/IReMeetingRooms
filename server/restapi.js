@@ -5,6 +5,9 @@ nconf.argv().env().file('./config.json');
 // IoTHubClient
 var IoTHubClient = require('./iothub.js');
 
+// Actions resolver
+var actionsResolver = require('./actionsResolver.js');
+
 // express
 var express = require('express')
 var bodyParser = require('body-parser');
@@ -22,7 +25,8 @@ app.post('/api/command', function (req, res) {
     var targetDevice = nconf.get('targetDevice'); 
     var action = req.body.action;
     var actor = req.body.actor;
-    IoTHubClient.sendC2DCommand(targetDevice, action, actor);
+    var parameters = actionsResolver.resolveParametersFor(action, actor);
+    IoTHubClient.sendC2DCommand(targetDevice, action, actor, parameters);
     res.json({ message: 'Got a POST request' })
 })
 

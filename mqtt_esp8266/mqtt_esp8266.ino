@@ -13,8 +13,10 @@
 #include <time.h>         // Time
 
 // WiFi Settings
-const char* wifi_ssid = "IreHOST";
-const char* wifi_pwd = "ChciZazit";
+//const char* wifi_ssid = "IreHOST";
+//const char* wifi_pwd = "ChciZazit";
+const char* wifi_ssid = "iPhone IReSoft";
+const char* wifi_pwd = "12345678";
 
 // Time
 const char* time_source1 = "pool.ntp.org";
@@ -23,7 +25,7 @@ const char* time_source2 = "time.nist.gov";
 // MQTT server
 const char* mqtt_server = "jkiothub.azure-devices.net";
 const int mqtt_port = 8883;
-const int mqtt_publish_period = 2000;
+const int mqtt_publish_period = 60000;
 
 // mqttClients
 WiFiClientSecure epsWiFiClient;
@@ -45,6 +47,9 @@ const int RC_PULSE_LENGTH = 308;
 
 // MQTT incoming message handler
 void MqttIncomingMessageHandler(char* topic, byte* payload, unsigned int length) {
+
+  digitalWrite(LED_BUILTIN, LOW);
+
   Serial.print("Message arrived [");
   Serial.print(topic);
   Serial.print("] ");
@@ -64,13 +69,15 @@ void MqttIncomingMessageHandler(char* topic, byte* payload, unsigned int length)
 
   const char* action = root["action"];
   const char* actor = root["actor"];
+  const char* parameters = root["parameters"];
 
   String actionString = String(action);
   String actorString = String(actor);
+  String parametersString = String(parameters);
 
   Serial.println(action);
-  Serial.println(actionString);
   Serial.println(actor);
+  Serial.println(parameters);
 
   if (actionString.equals("switchOn") && actorString.equals("lights"))
   {
@@ -86,6 +93,8 @@ void MqttIncomingMessageHandler(char* topic, byte* payload, unsigned int length)
     rcClient.send(13988867, 24);
     //rcClient.send(13982723, 24);
   }
+
+  digitalWrite(LED_BUILTIN, HIGH); 
 }
 
 // Init IO
@@ -93,6 +102,9 @@ void initIO()
 {
   pinMode(AMBIENT_LIGHT_PIN, INPUT);
   pinMode(PIR_PIN, INPUT_PULLUP);
+  pinMode(LED_BUILTIN, OUTPUT);
+
+  digitalWrite(LED_BUILTIN, HIGH); 
 }
 
 // Init Serial
