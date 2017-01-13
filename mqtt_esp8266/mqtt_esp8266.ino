@@ -36,6 +36,7 @@ PubSubClient mqttClient(epsWiFiClient);
 
 // 433 MHz radio controller
 RCSwitch rcClient = RCSwitch();
+const int RC_DATA_BIT_LENGTH = 24;
 
 // Temperature and humidity controller
 SHT3X sht30Client(0x45);
@@ -49,22 +50,18 @@ const int RC_PULSE_LENGTH = 308;
 // MQTT incoming message handler
 void MqttIncomingMessageHandler(char* topic, byte* payload, unsigned int length) {
 
+  // Switch on led (incoming message processing indicator)
   digitalWrite(LED_BUILTIN, LOW);
 
-  Serial.print("Message arrived [");
-  Serial.print(topic);
-  Serial.print("] ");
-
   String cmd = String();
-
   for (int i = 0; i < length; i++) {
-    Serial.print((char)payload[i]);
     cmd += (char)payload[i];
-
   }
-  Serial.println(cmd);
-  Serial.println();
 
+  Serial.print("Incomming command is: ");
+  Serial.println(cmd);
+  
+  // Command parsing
   StaticJsonBuffer<200> jsonBuffer;
   JsonObject& root = jsonBuffer.parseObject(cmd);
 
@@ -74,28 +71,17 @@ void MqttIncomingMessageHandler(char* topic, byte* payload, unsigned int length)
 
   String actionString = String(action);
   String actorString = String(actor);
-  String parametersString = String(parameters);
 
-  Serial.println(action);
-  Serial.println(actor);
-  Serial.println(parameters);
-
-  if (actionString.equals("switchOn") && actorString.equals("lights"))
+  // Lights are handled by 433 radio
+  if (actorString.equals("lights"))
   {
-    Serial.println("Turning lights on");
-    //rcClient.send(14013452, 24);
-    rcClient.send(13988876, 24);
-    //rcClient.send(13982732, 24);
-  }
-  else if (actionString.equals("switchOff") && actorString.equals("lights"))
-  {
-    Serial.println("Turning kights off");
-    //rcClient.send(14013443, 24);
-    rcClient.send(13988867, 24);
-    //rcClient.send(13982723, 24);
+    rcClient.send(String(parameters).toInt(), RC_DATA_BIT_LENGTH);
   }
 
+  // Switch on led (incoming message processing indicator)
   digitalWrite(LED_BUILTIN, HIGH);
+  
+  // Publish current state
   ReadDataAndPublish();
 }
 
@@ -286,3 +272,4 @@ void loop() {
     ReadDataAndPublish();
   }
 }
+
