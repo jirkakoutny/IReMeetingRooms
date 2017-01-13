@@ -7,21 +7,27 @@
 #include <time.h>         // Time
 
 // WiFi Settings
-//const char* wifi_ssid = "IreHOST";
-//const char* wifi_pwd = "ChciZazit";
-//const char* wifi_ssid = "iPhone IReSoft";
-//const char* wifi_pwd = "12345678";
-const char* wifi_ssid = "Pa&Pi";
-const char* wifi_pwd = "papousek";
+//const char* WIFI_SSID = "IreHOST";
+//const char* WIFI_PWD = "ChciZazit";
+//const char* WIFI_SSID = "iPhone IReSoft";
+//const char* WIFI_PWD = "12345678";
+const char* WIFI_SSID = "Pa&Pi";
+const char* WIFI_PWD = "papousek";
+const int WIFI_INIT_RETRY_DELAY = 1000;
 
 // Time
-const char* time_source1 = "pool.ntp.org";
-const char* time_source2 = "time.nist.gov";
+const char* TIME_SRC_1 = "pool.ntp.org";
+const char* TIME_SRC_2 = "time.nist.gov";
+const int TIME_INIT_RETRY_DELAY = 2000;
 
 // MQTT server
-const char* mqtt_server = "jkiothub.azure-devices.net";
-const int mqtt_port = 8883;
+const char* MQTT_SERVER = "jkiothub.azure-devices.net";
+const char* MQTT_CLIENT_ID = "jk01";
+const char* MQTT_USERNAME = "jkiothub.azure-devices.net/jk01";
+const char* MQTT_PASSWORD = "SharedAccessSignature sr=jkiothub.azure-devices.net%2Fdevices%2Fjk01&sig=l%2BToD8LnqJHbTX%2FS8rHBvNyiNcNgF7tmX9ekLO5KE2A%3D&se=1514922089";
+const int MQTT_PORT = 8883;
 const int mqtt_publish_period = 60000;
+const int MQTT_INIT_RETRY_DELAY = 5000;
 long lastMessageTime = 0;
 
 // mqttClients
@@ -33,8 +39,6 @@ RCSwitch rcClient = RCSwitch();
 
 // Temperature and humidity controller
 SHT3X sht30Client(0x45);
-
-
 
 const int AMBIENT_LIGHT_PIN = A0;
 const int PIR_PIN = D3;
@@ -91,7 +95,8 @@ void MqttIncomingMessageHandler(char* topic, byte* payload, unsigned int length)
     //rcClient.send(13982723, 24);
   }
 
-  digitalWrite(LED_BUILTIN, HIGH); 
+  digitalWrite(LED_BUILTIN, HIGH);
+  ReadDataAndPublish();
 }
 
 // Init IO
@@ -101,7 +106,7 @@ void initIO()
   pinMode(PIR_PIN, INPUT_PULLUP);
   pinMode(LED_BUILTIN, OUTPUT);
 
-  digitalWrite(LED_BUILTIN, HIGH); 
+  digitalWrite(LED_BUILTIN, HIGH);
 }
 
 // Init Serial
@@ -113,12 +118,12 @@ void initSerial()
 // Initializes current time
 void initTime() {
   time_t epochTime;
-  configTime(0, 0, time_source1, time_source2);
+  configTime(0, 0, TIME_SRC_1, TIME_SRC_2);
   while (true) {
     epochTime = time(NULL);
     if (epochTime == 0) {
-      Serial.println("Fetching NTP epoch time failed! Waiting 2 seconds to retry.");
-      delay(2000);
+      Serial.println("Fetching NTP epoch time failed! Waiting " + String(TIME_INIT_RETRY_DELAY) + " miliseconds to retry.");
+      delay(TIME_INIT_RETRY_DELAY);
     } else {
       Serial.print("Fetched NTP epoch time is: ");
       Serial.println(epochTime);
@@ -129,15 +134,19 @@ void initTime() {
 
 // Initializes WiFi
 void initWifi() {
-  delay(10);
+}
+
+
+// Recibbect for WiFi
+void WiFiReconnect() {
   Serial.println();
   Serial.print("Connecting to ");
-  Serial.println(wifi_ssid);
+  Serial.println(WIFI_SSID);
 
-  WiFi.begin(wifi_ssid, wifi_pwd);
+  WiFi.begin(WIFI_SSID, WIFI_PWD);
 
   while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
+    delay(WIFI_INIT_RETRY_DELAY);
     Serial.print(".");
   }
 
@@ -157,7 +166,7 @@ void initRC()
 // Init MQTT
 void initMQTT()
 {
-  mqttClient.setServer(mqtt_server, mqtt_port);
+  mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
   mqttClient.setCallback(MqttIncomingMessageHandler);
 }
 
@@ -165,17 +174,75 @@ void initMQTT()
 void MqttReconnect() {
   while (!mqttClient.connected()) {
     Serial.print("Attempting MQTT connection...");
-    if (mqttClient.connect("jk01", "jkiothub.azure-devices.net/jk01", "SharedAccessSignature sr=jkiothub.azure-devices.net%2Fdevices%2Fjk01&sig=l%2BToD8LnqJHbTX%2FS8rHBvNyiNcNgF7tmX9ekLO5KE2A%3D&se=1514922089"))
+    if (mqttClient.connect(MQTT_CLIENT_ID, MQTT_USERNAME, MQTT_PASSWORD))
     {
       Serial.println("connected");
       mqttClient.subscribe("devices/jk01/messages/devicebound/#", 1);
     } else {
       Serial.print("failed, rcClient=");
       Serial.print(mqttClient.state());
-      Serial.println(" try again in 5 seconds");
-      delay(5000);
+      Serial.println(" try again in " + String(MQTT_INIT_RETRY_DELAY) + " seconds");
+      delay(MQTT_INIT_RETRY_DELAY);
     }
   }
+}
+
+void ReadDataAndPublish()
+{
+  lastMessageTime = millis();
+  Serial.print("Publishing message: ");
+
+  sht30Client.get();
+  //    Serial.print("Temperature in Celsius : ");
+  //    Serial.println(sht30Client.cTemp);
+  //    Serial.print("Temperature in Fahrenheit : ");
+  //    Serial.println(sht30Client.fTemp);
+  //    Serial.print("Relative Humidity : ");
+  //    Serial.println(sht30Client.humidity);
+  //    Serial.println();
+  unsigned int light = analogRead(AMBIENT_LIGHT_PIN);
+  //    Serial.println(light);
+
+  if (light < 50)
+    light = 0;
+  else
+    light = 100;
+
+  bool motion = false;
+  int pirValState = digitalRead(PIR_PIN);
+  if (pirValState == LOW)
+  {
+    // motion
+    motion = true;
+  }
+  else
+  {
+    motion = false;
+    // no motion
+  }
+  Serial.println(motion);
+
+  time_t epochTime = time(NULL);
+  //Serial.println(".........");
+  //Serial.println(epochTime);
+
+  StaticJsonBuffer<200> jsonBuffer;
+  JsonObject& root = jsonBuffer.createObject();
+  root["deviceId"] = "jk01";
+  root["humidity"] = sht30Client.humidity;
+  root["temperature"] = sht30Client.cTemp;
+  root["timestamp"] = epochTime;
+  root["light"] = light;
+  root["move"] = motion;
+  //    root.printTo(Serial);
+
+  String s;
+  root.printTo(s);
+
+  Serial.println(s);
+
+  const char *cstr = s.c_str();
+  mqttClient.publish("devices/jk01/messages/events/", cstr);
 }
 
 // Setup board
@@ -201,7 +268,12 @@ void setup() {
 
 // Main loop
 void loop() {
-  // Reconnect, if not connected
+  if (WiFi.status() != WL_CONNECTED)
+  {
+    WiFiReconnect();
+  }
+
+  // Reconnect, if not already connected
   if (!mqttClient.connected()) {
     MqttReconnect();
   }
@@ -210,63 +282,7 @@ void loop() {
   mqttClient.loop();
 
   // Send current status, if it is time
-  long now = millis();
-  if (now - lastMessageTime > mqtt_publish_period) {
-    lastMessageTime = now;
-
-    Serial.print("Publishing message: ");
-
-    sht30Client.get();
-    //    Serial.print("Temperature in Celsius : ");
-    //    Serial.println(sht30Client.cTemp);
-    //    Serial.print("Temperature in Fahrenheit : ");
-    //    Serial.println(sht30Client.fTemp);
-    //    Serial.print("Relative Humidity : ");
-    //    Serial.println(sht30Client.humidity);
-    //    Serial.println();
-    unsigned int light = analogRead(AMBIENT_LIGHT_PIN);
-    //    Serial.println(light);
-
-    if (light < 50)
-      light = 0;
-    else
-      light = 100;
-
-    bool motion = false;
-    int pirValState = digitalRead(PIR_PIN);
-    if (pirValState == LOW)
-    {
-      // motion
-      motion = true;
-    }
-    else
-    {
-      motion = false;
-      // no motion
-    }
-    Serial.println(motion);
-
-    time_t epochTime = time(NULL);
-    //Serial.println(".........");
-    //Serial.println(epochTime);
-
-    StaticJsonBuffer<200> jsonBuffer;
-    JsonObject& root = jsonBuffer.createObject();
-    root["deviceId"] = "jk01";
-    root["humidity"] = sht30Client.humidity;
-    root["temperature"] = sht30Client.cTemp;
-    root["timestamp"] = epochTime;
-    root["light"] = light;
-    root["move"] = motion;
-    //    root.printTo(Serial);
-
-    String s;
-    root.printTo(s);
-
-    Serial.println(s);
-
-    const char *cstr = s.c_str();
-    mqttClient.publish("devices/jk01/messages/events/", cstr);
+  if (millis() - lastMessageTime > mqtt_publish_period) {
+    ReadDataAndPublish();
   }
 }
-
