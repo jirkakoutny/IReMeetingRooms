@@ -1,9 +1,3 @@
-/*
-  It will MqttReconnect to the server if the connection is lost using a blocking
-  MqttReconnect function. See the 'mqtt_MqttReconnect_nonblocking' example for how to
-  achieve the same result without blocking the main loop.
-*/
-
 // Includes
 #include <ESP8266WiFi.h>  // ESP board
 #include <RCSwitch.h>     // 433 MHz radio
@@ -15,8 +9,10 @@
 // WiFi Settings
 //const char* wifi_ssid = "IreHOST";
 //const char* wifi_pwd = "ChciZazit";
-const char* wifi_ssid = "iPhone IReSoft";
-const char* wifi_pwd = "12345678";
+//const char* wifi_ssid = "iPhone IReSoft";
+//const char* wifi_pwd = "12345678";
+const char* wifi_ssid = "Pa&Pi";
+const char* wifi_pwd = "papousek";
 
 // Time
 const char* time_source1 = "pool.ntp.org";
@@ -26,6 +22,7 @@ const char* time_source2 = "time.nist.gov";
 const char* mqtt_server = "jkiothub.azure-devices.net";
 const int mqtt_port = 8883;
 const int mqtt_publish_period = 60000;
+long lastMessageTime = 0;
 
 // mqttClients
 WiFiClientSecure epsWiFiClient;
@@ -37,7 +34,7 @@ RCSwitch rcClient = RCSwitch();
 // Temperature and humidity controller
 SHT3X sht30Client(0x45);
 
-long timeFromLastMessage = 0;
+
 
 const int AMBIENT_LIGHT_PIN = A0;
 const int PIR_PIN = D3;
@@ -214,8 +211,8 @@ void loop() {
 
   // Send current status, if it is time
   long now = millis();
-  if (now - timeFromLastMessage > mqtt_publish_period) {
-    timeFromLastMessage = now;
+  if (now - lastMessageTime > mqtt_publish_period) {
+    lastMessageTime = now;
 
     Serial.print("Publishing message: ");
 
