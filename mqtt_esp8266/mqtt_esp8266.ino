@@ -28,8 +28,10 @@ const char* MQTT_PASSWORD = "SharedAccessSignature sr=jkiothub.azure-devices.net
 const int MQTT_PORT = 8883;
 const int mqtt_publish_period = 60000;
 const int MQTT_INIT_RETRY_DELAY = 5000;
-const int MQTT_JSON_BUFFER_SIZE = 200;
-StaticJsonBuffer<MQTT_JSON_BUFFER_SIZE> jsonBuffer;
+const int MQTT_JSON_INPUT_BUFFER_SIZE = 200;
+const int MQTT_JSON_OUTPUT_BUFFER_SIZE = 200;
+StaticJsonBuffer<MQTT_JSON_INPUT_BUFFER_SIZE> MQTT_INPUT_JSON_BUFFER;
+StaticJsonBuffer<MQTT_JSON_OUTPUT_BUFFER_SIZE> MQTT_OUTPUT_JSON_BUFFER;
 long lastMessageTime = 0;
 
 // mqttClients
@@ -63,9 +65,9 @@ void MqttIncomingMessageHandler(char* topic, byte* payload, unsigned int length)
 
   Serial.print("Incomming command is: ");
   Serial.println(cmd);
-  
+
   // Command parsing
-  JsonObject& root = jsonBuffer.parseObject(cmd);
+  JsonObject& root = MQTT_INPUT_JSON_BUFFER.parseObject(cmd);
 
   const char* action = root["action"];
   const char* actor = root["actor"];
@@ -75,7 +77,6 @@ void MqttIncomingMessageHandler(char* topic, byte* payload, unsigned int length)
   String actorString = String(actor);
   String parametersString = String(parameters);
 
-
   // Lights are handled by 433 radio
   if (actorString.equals("lights"))
   {
@@ -84,7 +85,7 @@ void MqttIncomingMessageHandler(char* topic, byte* payload, unsigned int length)
 
   // Switch on led (incoming message processing indicator)
   digitalWrite(LED_BUILTIN, HIGH);
-  
+
   // Publish current state
   ReadDataAndPublish();
 }
@@ -179,60 +180,38 @@ void MqttReconnect() {
 
 void ReadDataAndPublish()
 {
-  lastMessageTime = millis();
-  Serial.print("Publishing message: ");
-
+  // Read data  
   sht30Client.get();
-  //    Serial.print("Temperature in Celsius : ");
-  //    Serial.println(sht30Client.cTemp);
-  //    Serial.print("Temperature in Fahrenheit : ");
-  //    Serial.println(sht30Client.fTemp);
-  //    Serial.print("Relative Humidity : ");
-  //    Serial.println(sht30Client.humidity);
-  //    Serial.println();
-  unsigned int light = analogRead(AMBIENT_LIGHT_PIN);
-  //    Serial.println(light);
-
-  if (light < 50)
-    light = 0;
-  else
-    light = 100;
-
-  bool motion = false;
-  int pirValState = digitalRead(PIR_PIN);
-  if (pirValState == LOW)
-  {
-    // motion
-    motion = true;
-  }
-  else
-  {
-    motion = false;
-    // no motion
-  }
-  Serial.println(motion);
+  
+  unsigned int light = analogRead(AMBIENT_LIGHT_PIN) < 50 ? 0 : 100;
+  bool motion = digitalRead(PIR_PIN) == LOW ? true : false;
+  
 
   time_t epochTime = time(NULL);
-  //Serial.println(".........");
-  //Serial.println(epochTime);
 
-  StaticJsonBuffer<200> jsonBuffer;
-  JsonObject& root = jsonBuffer.createObject();
-  root["deviceId"] = "jk01";
+  // Build message
+  JsonObject& root = MQTT_INPUT_JSON_BUFFER.createObject();
+  
+  root["deviceId"] = MQTT_CLIENT_ID;
   root["humidity"] = sht30Client.humidity;
   root["temperature"] = sht30Client.cTemp;
   root["timestamp"] = epochTime;
   root["light"] = light;
   root["move"] = motion;
-  //    root.printTo(Serial);
 
-  String s;
-  root.printTo(s);
+  String msg;
+  root.printTo(msg);
+  
+  // Log message 
+  Serial.print("Publishing message: ");
+  Serial.println(msg);
 
-  Serial.println(s);
-
-  const char *cstr = s.c_str();
+  // Publish message
+  const char *cstr = msg.c_str();
   mqttClient.publish("devices/jk01/messages/events/", cstr);
+  
+  // Save last message time
+  lastMessageTime = millis();
 }
 
 // Setup board
