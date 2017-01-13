@@ -28,6 +28,8 @@ const char* MQTT_PASSWORD = "SharedAccessSignature sr=jkiothub.azure-devices.net
 const int MQTT_PORT = 8883;
 const int mqtt_publish_period = 60000;
 const int MQTT_INIT_RETRY_DELAY = 5000;
+const int MQTT_JSON_BUFFER_SIZE = 200;
+StaticJsonBuffer<MQTT_JSON_BUFFER_SIZE> jsonBuffer;
 long lastMessageTime = 0;
 
 // mqttClients
@@ -53,6 +55,7 @@ void MqttIncomingMessageHandler(char* topic, byte* payload, unsigned int length)
   // Switch on led (incoming message processing indicator)
   digitalWrite(LED_BUILTIN, LOW);
 
+  // Read command
   String cmd = String();
   for (int i = 0; i < length; i++) {
     cmd += (char)payload[i];
@@ -62,7 +65,6 @@ void MqttIncomingMessageHandler(char* topic, byte* payload, unsigned int length)
   Serial.println(cmd);
   
   // Command parsing
-  StaticJsonBuffer<200> jsonBuffer;
   JsonObject& root = jsonBuffer.parseObject(cmd);
 
   const char* action = root["action"];
@@ -71,11 +73,13 @@ void MqttIncomingMessageHandler(char* topic, byte* payload, unsigned int length)
 
   String actionString = String(action);
   String actorString = String(actor);
+  String parametersString = String(parameters);
+
 
   // Lights are handled by 433 radio
   if (actorString.equals("lights"))
   {
-    rcClient.send(String(parameters).toInt(), RC_DATA_BIT_LENGTH);
+    rcClient.send(parametersString.toInt(), RC_DATA_BIT_LENGTH);
   }
 
   // Switch on led (incoming message processing indicator)
