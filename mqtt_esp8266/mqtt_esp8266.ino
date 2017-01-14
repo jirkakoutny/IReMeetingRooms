@@ -180,37 +180,35 @@ void MqttReconnect() {
 
 void ReadDataAndPublish()
 {
-  // Read data  
+
+
   sht30Client.get();
-  
+
   unsigned int light = analogRead(AMBIENT_LIGHT_PIN) < 50 ? 0 : 100;
-  bool motion = digitalRead(PIR_PIN) == LOW ? true : false;
-  
+
+  bool motion = digitalRead(PIR_PIN) == LOW;
 
   time_t epochTime = time(NULL);
 
-  // Build message
-  JsonObject& root = MQTT_INPUT_JSON_BUFFER.createObject();
-  
-  root["deviceId"] = MQTT_CLIENT_ID;
+
+  StaticJsonBuffer<200> jsonBuffer;
+  JsonObject& root = jsonBuffer.createObject();
+  root["deviceId"] = "jk01";
   root["humidity"] = sht30Client.humidity;
   root["temperature"] = sht30Client.cTemp;
   root["timestamp"] = epochTime;
   root["light"] = light;
   root["move"] = motion;
 
-  String msg;
-  root.printTo(msg);
-  
-  // Log message 
-  Serial.print("Publishing message: ");
-  Serial.println(msg);
+  String s;
+  root.printTo(s);
 
-  // Publish message
-  const char *cstr = msg.c_str();
+
+  Serial.print("Publishing message: ");
+  Serial.println(s);
+
+  const char *cstr = s.c_str();
   mqttClient.publish("devices/jk01/messages/events/", cstr);
-  
-  // Save last message time
   lastMessageTime = millis();
 }
 
