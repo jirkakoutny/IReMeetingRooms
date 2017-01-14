@@ -30,8 +30,6 @@ const int mqtt_publish_period = 60000;
 const int MQTT_INIT_RETRY_DELAY = 5000;
 const int MQTT_JSON_INPUT_BUFFER_SIZE = 200;
 const int MQTT_JSON_OUTPUT_BUFFER_SIZE = 200;
-StaticJsonBuffer<MQTT_JSON_INPUT_BUFFER_SIZE> MQTT_INPUT_JSON_BUFFER;
-StaticJsonBuffer<MQTT_JSON_OUTPUT_BUFFER_SIZE> MQTT_OUTPUT_JSON_BUFFER;
 long lastMessageTime = 0;
 
 // mqttClients
@@ -67,6 +65,7 @@ void MqttIncomingMessageHandler(char* topic, byte* payload, unsigned int length)
   Serial.println(cmd);
 
   // Command parsing
+  StaticJsonBuffer<MQTT_JSON_INPUT_BUFFER_SIZE> MQTT_INPUT_JSON_BUFFER;
   JsonObject& root = MQTT_INPUT_JSON_BUFFER.parseObject(cmd);
 
   const char* action = root["action"];
@@ -184,23 +183,28 @@ void ReadDataAndPublish()
   sht30Client.get();
 
   // Build message
-  StaticJsonBuffer<200> jsonBuffer;
-  JsonObject& root = jsonBuffer.createObject();
-  root["deviceId"] = "jk01";
+  StaticJsonBuffer<MQTT_JSON_OUTPUT_BUFFER_SIZE> MQTT_OUTPUT_JSON_BUFFER;
+  JsonObject& root = MQTT_OUTPUT_JSON_BUFFER.createObject();
+  root["deviceId"] = MQTT_CLIENT_ID;
   root["humidity"] = sht30Client.humidity;
   root["temperature"] = sht30Client.cTemp;
   root["timestamp"] = time(NULL);
   root["light"] = analogRead(AMBIENT_LIGHT_PIN) < 50 ? 0 : 100;
   root["move"] = digitalRead(PIR_PIN) == LOW;
 
-  String s;
-  root.printTo(s);
+  // Serialize message
+  String msg;
+  root.printTo(msg);
 
+  // Log message
   Serial.print("Publishing message: ");
-  Serial.println(s);
+  Serial.println(msg);
 
-  const char *cstr = s.c_str();
+  // Publish message
+  const char *cstr = msg.c_str();
   mqttClient.publish("devices/jk01/messages/events/", cstr);
+
+  // Save last publish time
   lastMessageTime = millis();
 }
 
