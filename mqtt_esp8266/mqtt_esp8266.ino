@@ -180,29 +180,21 @@ void MqttReconnect() {
 
 void ReadDataAndPublish()
 {
-
-
+  // Update readings
   sht30Client.get();
 
-  unsigned int light = analogRead(AMBIENT_LIGHT_PIN) < 50 ? 0 : 100;
-
-  bool motion = digitalRead(PIR_PIN) == LOW;
-
-  time_t epochTime = time(NULL);
-
-
+  // Build message
   StaticJsonBuffer<200> jsonBuffer;
   JsonObject& root = jsonBuffer.createObject();
   root["deviceId"] = "jk01";
   root["humidity"] = sht30Client.humidity;
   root["temperature"] = sht30Client.cTemp;
-  root["timestamp"] = epochTime;
-  root["light"] = light;
-  root["move"] = motion;
+  root["timestamp"] = time(NULL);
+  root["light"] = analogRead(AMBIENT_LIGHT_PIN) < 50 ? 0 : 100;
+  root["move"] = digitalRead(PIR_PIN) == LOW;
 
   String s;
   root.printTo(s);
-
 
   Serial.print("Publishing message: ");
   Serial.println(s);
